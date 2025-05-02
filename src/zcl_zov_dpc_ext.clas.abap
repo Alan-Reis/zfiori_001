@@ -147,23 +147,50 @@ CLASS ZCL_ZOV_DPC_EXT IMPLEMENTATION.
   endmethod.
 
 
-  method OVCABSET_CREATE_ENTITY.
-**try.
-*CALL METHOD SUPER->OVCABSET_CREATE_ENTITY
-*  EXPORTING
-*    IV_ENTITY_NAME          =
-*    IV_ENTITY_SET_NAME      =
-*    IV_SOURCE_NAME          =
-*    IT_KEY_TAB              =
-**    io_tech_request_context =
-*    IT_NAVIGATION_PATH      =
-**    io_data_provider        =
-**  importing
-**    er_entity               =
-*    .
-** catch /iwbep/cx_mgw_busi_exception .
-** catch /iwbep/cx_mgw_tech_exception .
-**endtry.
+  method ovcabset_create_entity.
+    data: ld_lastid type int4,
+          ls_cab    type zovcab.
+
+    data(lo_msg) = me->/iwbep/if_mgw_conv_srv_runtime~get_message_container( ).
+
+    io_data_provider->read_entry_data(
+      importing
+        es_data = er_entity ).
+
+    move-corresponding er_entity to ls_cab.
+
+    ls_cab-criacao_data = sy-datum.
+    ls_cab-criacao_hora = sy-uzeit.
+    ls_cab-criacao_usuario = sy-uname.
+
+    select single max( ordemid )
+      into ld_lastid
+      from zovcab.
+
+    ls_cab-ordemid = ld_lastid + 1.
+
+    insert zovcab from ls_cab.
+
+    if sy-subrc <> 0.
+      lo_msg->add_message_text_only(
+        exporting
+          iv_msg_type               =  'E'                     " Message Type - defined by GCS_MESSAGE_TYPE
+          iv_msg_text               =  'Erro ao inserir ordem' " Message Text
+          ).
+
+      raise exception type /iwbep/cx_mgw_busi_exception
+        exporting
+          message_container = lo_msg.
+    endif.
+
+    MOVE-CORRESPONDING ls_cab TO er_entity.
+
+    CONVERT
+      DATE ls_cab-criacao_data
+      TIME ls_cab-criacao_hora
+      INTO TIME STAMP er_entity-datacriacao
+      TIME ZONE sy-zonlo.
+
   endmethod.
 
 
@@ -216,23 +243,43 @@ CLASS ZCL_ZOV_DPC_EXT IMPLEMENTATION.
   endmethod.
 
 
-  method OVITEMSET_CREATE_ENTITY.
-**try.
-*CALL METHOD SUPER->OVITEMSET_CREATE_ENTITY
-*  EXPORTING
-*    IV_ENTITY_NAME          =
-*    IV_ENTITY_SET_NAME      =
-*    IV_SOURCE_NAME          =
-*    IT_KEY_TAB              =
-**    io_tech_request_context =
-*    IT_NAVIGATION_PATH      =
-**    io_data_provider        =
-**  importing
-**    er_entity               =
-*    .
-** catch /iwbep/cx_mgw_busi_exception .
-** catch /iwbep/cx_mgw_tech_exception .
-**endtry.
+  method ovitemset_create_entity.
+    data ls_item type zovitem.
+
+    data(lo_msg) = me->/iwbep/if_mgw_conv_srv_runtime~get_message_container( ).
+
+    data: ld_lastid type int4,
+          ls_cab    type zovcab.
+
+    io_data_provider->read_entry_data(
+      importing
+        es_data = er_entity ).
+
+    move-corresponding er_entity to ls_item.
+
+    if er_entity-itemid = 0.
+      select single max( itemid )
+        into er_entity-itemid
+        from zovitem
+        where ordemid = er_entity-ordemid.
+
+      er_entity-itemid = er_entity-itemid + 1.
+    endif.
+
+    insert zovitem from ls_item.
+
+    if sy-subrc <> 0.
+      lo_msg->add_message_text_only(
+        exporting
+          iv_msg_type               =  'E'                     " Message Type - defined by GCS_MESSAGE_TYPE
+          iv_msg_text               =  'Erro ao inserir item' " Message Text
+          ).
+
+      raise exception type /iwbep/cx_mgw_busi_exception
+        exporting
+          message_container = lo_msg.
+    endif.
+
   endmethod.
 
 
