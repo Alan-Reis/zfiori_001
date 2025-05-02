@@ -212,6 +212,54 @@ CLASS ZCL_ZOV_DPC_EXT IMPLEMENTATION.
 
 
   method ovcabset_get_entity.
+    data: ld_ordemid type zovcab-ordemid,
+          ls_key_tab like line of it_key_tab,
+          ls_cab     type zovcab.
+
+    data(lo_msg) = me->/iwbep/if_mgw_conv_srv_runtime~get_message_container( ).
+
+    read table it_key_tab into ls_key_tab with key name = 'OrdemId'.
+    if sy-subrc <> 0.
+      lo_msg->add_message_text_only(
+        exporting
+          iv_msg_type               = 'E'                          " Message Type - defined by GCS_MESSAGE_TYPE
+          iv_msg_text               = 'Id da ordem não informado'  " Message Text
+      ).
+
+      raise exception type /iwbep/cx_mgw_busi_exception
+        exporting
+          message_container = lo_msg.
+
+    endif.
+
+    ld_ordemid = ls_key_tab-value.
+
+    select single *
+      into ls_cab
+      from zovcab
+      where ordemid = ld_ordemid.
+
+    if sy-subrc = 0.
+      move-corresponding ls_cab to er_entity.
+
+      er_entity-criadopor = ls_cab-criacao_usuario.
+
+      convert
+        date ls_cab-criacao_data
+        time ls_cab-criacao_hora
+        into time stamp er_entity-datacriacao
+        time zone sy-zonlo.
+    else.
+      lo_msg->add_message_text_only(
+       exporting
+         iv_msg_type               = 'E'                           " Message Type - defined by GCS_MESSAGE_TYPE
+         iv_msg_text               = 'Id da ordem não encontrado'  " Message Text
+     ).
+
+      raise exception type /iwbep/cx_mgw_busi_exception
+        exporting
+          message_container = lo_msg.
+    endif.
 
   endmethod.
 
@@ -323,24 +371,72 @@ CLASS ZCL_ZOV_DPC_EXT IMPLEMENTATION.
   endmethod.
 
 
-  method OVITEMSET_GET_ENTITY.
-**try.
-*CALL METHOD SUPER->OVITEMSET_GET_ENTITY
-*  EXPORTING
-*    IV_ENTITY_NAME          =
-*    IV_ENTITY_SET_NAME      =
-*    IV_SOURCE_NAME          =
-*    IT_KEY_TAB              =
-**    io_request_object       =
-**    io_tech_request_context =
-*    IT_NAVIGATION_PATH      =
-**  importing
-**    er_entity               =
-**    es_response_context     =
-*    .
-** catch /iwbep/cx_mgw_busi_exception .
-** catch /iwbep/cx_mgw_tech_exception .
-**endtry.
+  method ovitemset_get_entity.
+    data: ls_key_tab like line of it_key_tab,
+          ls_item    type zovitem,
+          ld_error   type flag.
+
+    data(lo_msg) = me->/iwbep/if_mgw_conv_srv_runtime~get_message_container( ).
+
+    read table it_key_tab into ls_key_tab with key name = 'OrdemId'.
+    if sy-subrc <> 0.
+      ld_error = 'X'.
+
+      lo_msg->add_message_text_only(
+       exporting
+         iv_msg_type               = 'E'                 " Message Type - defined by GCS_MESSAGE_TYPE
+         iv_msg_text               = 'Id da ordem não informado'  " Message Text
+     ).
+
+      raise exception type /iwbep/cx_mgw_busi_exception
+        exporting
+          message_container = lo_msg.
+    endif.
+
+    ls_item-ordemid = ls_key_tab-value.
+
+    read table it_key_tab into ls_key_tab with key name = 'ItemId'.
+    if sy-subrc <> 0.
+      ld_error = 'X'.
+
+      lo_msg->add_message_text_only(
+       exporting
+         iv_msg_type               = 'E'                 " Message Type - defined by GCS_MESSAGE_TYPE
+         iv_msg_text               = 'Id da item não informado'  " Message Text
+     ).
+
+      raise exception type /iwbep/cx_mgw_busi_exception
+        exporting
+          message_container = lo_msg.
+    endif.
+
+    ls_item-itemid = ls_key_tab-value.
+
+    if ld_error = 'X'.
+      raise exception type /iwbep/cx_mgw_busi_exception
+        exporting
+          message_container = lo_msg.
+    endif.
+
+    select single *
+      into ls_item
+      from zovitem
+      where ordemid = ls_item-ordemid
+      and itemid = ls_item-itemid.
+
+    if sy-subrc = 0.
+      move-corresponding ls_item to er_entity.
+    else.
+      lo_msg->add_message_text_only(
+ exporting
+   iv_msg_type               = 'E'                 " Message Type - defined by GCS_MESSAGE_TYPE
+   iv_msg_text               = 'Id da item não encontrado'  " Message Text
+).
+
+      raise exception type /iwbep/cx_mgw_busi_exception
+        exporting
+          message_container = lo_msg.
+    endif.
   endmethod.
 
 
