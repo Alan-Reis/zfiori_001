@@ -184,49 +184,15 @@ CLASS ZCL_ZOV_DPC_EXT IMPLEMENTATION.
   endmethod.
 
 
-  method OVCABSET_GET_ENTITY.
-**try.
-*CALL METHOD SUPER->OVCABSET_GET_ENTITY
-*  EXPORTING
-*    IV_ENTITY_NAME          =
-*    IV_ENTITY_SET_NAME      =
-*    IV_SOURCE_NAME          =
-*    IT_KEY_TAB              =
-**    io_request_object       =
-**    io_tech_request_context =
-*    IT_NAVIGATION_PATH      =
-**  importing
-**    er_entity               =
-**    es_response_context     =
-*    .
-** catch /iwbep/cx_mgw_busi_exception .
-** catch /iwbep/cx_mgw_tech_exception .
-**endtry.
+  method ovcabset_get_entity.
+    er_entity-ordemid = 1.
+    er_entity-criadopor = 'Alan'.
+    er_entity-datacriacao = '197001010000000'.
   endmethod.
 
 
   method OVCABSET_GET_ENTITYSET.
-**try.
-*CALL METHOD SUPER->OVCABSET_GET_ENTITYSET
-*  EXPORTING
-*    IV_ENTITY_NAME           =
-*    IV_ENTITY_SET_NAME       =
-*    IV_SOURCE_NAME           =
-*    IT_FILTER_SELECT_OPTIONS =
-*    IS_PAGING                =
-*    IT_KEY_TAB               =
-*    IT_NAVIGATION_PATH       =
-*    IT_ORDER                 =
-*    IV_FILTER_STRING         =
-*    IV_SEARCH_STRING         =
-**    io_tech_request_context  =
-**  importing
-**    et_entityset             =
-**    es_response_context      =
-*    .
-** catch /iwbep/cx_mgw_busi_exception .
-** catch /iwbep/cx_mgw_tech_exception .
-**endtry.
+
   endmethod.
 
 
@@ -309,27 +275,7 @@ CLASS ZCL_ZOV_DPC_EXT IMPLEMENTATION.
 
 
   method OVITEMSET_GET_ENTITYSET.
-**try.
-*CALL METHOD SUPER->OVITEMSET_GET_ENTITYSET
-*  EXPORTING
-*    IV_ENTITY_NAME           =
-*    IV_ENTITY_SET_NAME       =
-*    IV_SOURCE_NAME           =
-*    IT_FILTER_SELECT_OPTIONS =
-*    IS_PAGING                =
-*    IT_KEY_TAB               =
-*    IT_NAVIGATION_PATH       =
-*    IT_ORDER                 =
-*    IV_FILTER_STRING         =
-*    IV_SEARCH_STRING         =
-**    io_tech_request_context  =
-**  importing
-**    et_entityset             =
-**    es_response_context      =
-*    .
-** catch /iwbep/cx_mgw_busi_exception .
-** catch /iwbep/cx_mgw_tech_exception .
-**endtry.
+
   endmethod.
 
 
