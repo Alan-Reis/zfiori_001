@@ -212,14 +212,37 @@ CLASS ZCL_ZOV_DPC_EXT IMPLEMENTATION.
 
 
   method ovcabset_get_entity.
-    er_entity-ordemid = 1.
-    er_entity-criadopor = 'Alan'.
-    er_entity-datacriacao = '197001010000000'.
+
   endmethod.
 
 
-  method OVCABSET_GET_ENTITYSET.
+  method ovcabset_get_entityset.
+    data: lt_cab       type standard table of zovcab,
+          ls_cab       type zovcab,
+          ls_entityset like line of et_entityset.
 
+    select *
+      into table lt_cab
+      from zovcab.
+
+
+    loop at lt_cab into ls_cab.
+      clear ls_entityset.
+
+      move-corresponding ls_cab to ls_entityset.
+
+      ls_entityset-criadopor  = ls_cab-criacao_usuario.
+
+      convert
+         date ls_cab-criacao_data
+         time ls_cab-criacao_hora
+         into time stamp ls_entityset-datacriacao
+         time zone sy-zonlo.
+
+
+      append ls_entityset to et_entityset.
+
+    endloop.
   endmethod.
 
 
@@ -321,7 +344,31 @@ CLASS ZCL_ZOV_DPC_EXT IMPLEMENTATION.
   endmethod.
 
 
-  method OVITEMSET_GET_ENTITYSET.
+  method ovitemset_get_entityset.
+    data: ld_ordemid       type int4,
+          lt_ordemid_range type range of int4,
+          ls_ordemid_range like line of lt_ordemid_range,
+          ls_key_tab       like line of it_key_tab.
+
+    read table it_key_tab into ls_key_tab with key name = 'OrdemId'.
+
+    if sy-subrc = 0.
+      ld_ordemid = ls_key_tab-value.
+
+      clear ls_ordemid_range.
+      ls_ordemid_range-sign = 'I'.
+      ls_ordemid_range-option = 'EQ'.
+      ls_ordemid_range-low = ld_ordemid.
+
+      append ls_ordemid_range to lt_ordemid_range.
+
+    endif.
+
+    select *
+      into corresponding fields of table et_entityset
+      from zovitem
+      where ordemid in lt_ordemid_range.
+
 
   endmethod.
 
