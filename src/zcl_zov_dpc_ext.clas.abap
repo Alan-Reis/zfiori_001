@@ -267,11 +267,33 @@ CLASS ZCL_ZOV_DPC_EXT IMPLEMENTATION.
   method ovcabset_get_entityset.
     data: lt_cab       type standard table of zovcab,
           ls_cab       type zovcab,
-          ls_entityset like line of et_entityset.
+          ls_entityset like line of et_entityset,
+          lt_orderby   type standard table of string,
+          ld_orderby   type string.
+
+    loop at it_order into data(ls_order).
+      translate ls_order-property to upper case.
+      translate ls_order-order to upper case.
+
+      if ls_order-order = 'DESC'.
+        ls_order-order = 'DESCENDING'.
+      else.
+        ls_order-order = 'ASCENDING'.
+      endif.
+
+      append |{ ls_order-property } { ls_order-order }| to lt_orderby.
+    endloop .
+
+    concatenate lines of lt_orderby into ld_orderby separated by ''.
+
 
     select *
-      into table lt_cab
-      from zovcab.
+      from zovcab
+      where (iv_filter_string)
+      order by (ld_orderby)
+      into table @lt_cab
+      up to @is_paging-top rows
+      offset @is_paging-skip.
 
 
     loop at lt_cab into ls_cab.
