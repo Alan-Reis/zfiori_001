@@ -286,6 +286,9 @@ CLASS ZCL_ZOV_DPC_EXT IMPLEMENTATION.
 
     concatenate lines of lt_orderby into ld_orderby separated by ''.
 
+    if ld_orderby = ''.
+      ld_orderby = 'OrdemId ASCENDING'.
+    endif.
 
     select *
       from zovcab
@@ -316,23 +319,36 @@ CLASS ZCL_ZOV_DPC_EXT IMPLEMENTATION.
   endmethod.
 
 
-  method OVCABSET_UPDATE_ENTITY.
-**try.
-*CALL METHOD SUPER->OVCABSET_UPDATE_ENTITY
-*  EXPORTING
-*    IV_ENTITY_NAME          =
-*    IV_ENTITY_SET_NAME      =
-*    IV_SOURCE_NAME          =
-*    IT_KEY_TAB              =
-**    io_tech_request_context =
-*    IT_NAVIGATION_PATH      =
-**    io_data_provider        =
-**  importing
-**    er_entity               =
-*    .
-** catch /iwbep/cx_mgw_busi_exception .
-** catch /iwbep/cx_mgw_tech_exception .
-**endtry.
+  method ovcabset_update_entity.
+    data(lo_msg) = me->/iwbep/if_mgw_conv_srv_runtime~get_message_container( ).
+
+    io_data_provider->read_entry_data(
+      importing
+        es_data = er_entity
+    ).
+
+    er_entity-ordemid = it_key_tab[ name = 'OrdemId' ]-value.
+
+    update zovcab
+       set clienteid = er_entity-clienteid
+           totalitens = er_entity-totalitens
+           totalfrete = er_entity-totalfrete
+           totalordem = er_entity-totalordem
+           status = er_entity-status
+      where ordemid = er_entity-ordemid.
+
+    if sy-subrc <> 0.
+      lo_msg->add_message_text_only(
+        exporting
+          iv_msg_type               =  'E'                " Message Type - defined by GCS_MESSAGE_TYPE
+          iv_msg_text               =  'Erro ao atualizar ordem'                " Message Text
+ ).
+
+
+      raise exception type /iwbep/cx_mgw_busi_exception
+        exporting
+          message_container = lo_msg.
+    endif.
   endmethod.
 
 
@@ -491,22 +507,38 @@ CLASS ZCL_ZOV_DPC_EXT IMPLEMENTATION.
   endmethod.
 
 
-  method OVITEMSET_UPDATE_ENTITY.
-**try.
-*CALL METHOD SUPER->OVITEMSET_UPDATE_ENTITY
-*  EXPORTING
-*    IV_ENTITY_NAME          =
-*    IV_ENTITY_SET_NAME      =
-*    IV_SOURCE_NAME          =
-*    IT_KEY_TAB              =
-**    io_tech_request_context =
-*    IT_NAVIGATION_PATH      =
-**    io_data_provider        =
-**  importing
-**    er_entity               =
-*    .
-** catch /iwbep/cx_mgw_busi_exception .
-** catch /iwbep/cx_mgw_tech_exception .
-**endtry.
+  method ovitemset_update_entity.
+    data(lo_msg) = me->/iwbep/if_mgw_conv_srv_runtime~get_message_container( ).
+
+    io_data_provider->read_entry_data(
+      importing
+        es_data = er_entity
+    ).
+
+    er_entity-ordemid = it_key_tab[ name = 'OrdemId' ]-value.
+    er_entity-itemid = it_key_tab[ name = 'ItemId' ]-value.
+    er_entity-precotot = er_entity-quantidade * er_entity-precounit.
+
+    update zovitem
+       set material = er_entity-material
+           descricao = er_entity-descricao
+           quantidade = er_entity-quantidade
+           precotot = er_entity-precotot
+           precouni = er_entity-precounit
+     where ordemid = er_entity-ordemid
+       and itemid = er_entity-itemid.
+
+    if sy-subrc <> 0.
+      lo_msg->add_message_text_only(
+        exporting
+          iv_msg_type               = 'E'                 " Message Type - defined by GCS_MESSAGE_TYPE
+          iv_msg_text               = 'Erro ao atualizar item'                 " Message Text
+   ).
+
+
+      raise exception type /iwbep/cx_mgw_busi_exception
+        exporting
+          message_container = lo_msg.
+    endif.
   endmethod.
 ENDCLASS.
