@@ -194,20 +194,55 @@ CLASS ZCL_ZOV_DPC_EXT IMPLEMENTATION.
   endmethod.
 
 
-  method OVCABSET_DELETE_ENTITY.
-**try.
-*CALL METHOD SUPER->OVCABSET_DELETE_ENTITY
-*  EXPORTING
-*    IV_ENTITY_NAME          =
-*    IV_ENTITY_SET_NAME      =
-*    IV_SOURCE_NAME          =
-*    IT_KEY_TAB              =
-**    io_tech_request_context =
-*    IT_NAVIGATION_PATH      =
-*    .
-** catch /iwbep/cx_mgw_busi_exception .
-** catch /iwbep/cx_mgw_tech_exception .
-**endtry.
+  method ovcabset_delete_entity.
+    data: ls_key_tab like line of it_key_tab.
+
+    data(lo_msg) = me->/iwbep/if_mgw_conv_srv_runtime~get_message_container( ).
+
+    read table it_key_tab into ls_key_tab with key name = 'OrdemId'.
+    if sy-subrc <> 0.
+      lo_msg->add_message_text_only(
+        exporting
+          iv_msg_type               =  'E'                " Message Type - defined by GCS_MESSAGE_TYPE
+          iv_msg_text               =  'OrdemId não informado'                " Message Text
+      ).
+
+      raise exception type /iwbep/cx_mgw_base_exception
+        exporting
+          message_container = lo_msg.
+    endif.
+
+    delete from zovitem where ordemid = ls_key_tab-value.
+    if sy-subrc <> 0.
+      rollback work.
+
+      lo_msg->add_message_text_only(
+        exporting
+          iv_msg_type               =  'E'                " Message Type - defined by GCS_MESSAGE_TYPE
+          iv_msg_text               =  'Erro ao temover itens'                " Message Text
+  ).
+
+      raise exception type /iwbep/cx_mgw_base_exception
+        exporting
+          message_container = lo_msg.
+    endif.
+
+    delete from zovcab where ordemid = ls_key_tab-value.
+    if sy-subrc <> 0.
+      rollback work.
+
+      lo_msg->add_message_text_only(
+        exporting
+          iv_msg_type               =  'E'                " Message Type - defined by GCS_MESSAGE_TYPE
+          iv_msg_text               =  'Erro ao temover ordem'                " Message Text
+  ).
+
+      raise exception type /iwbep/cx_mgw_base_exception
+        exporting
+          message_container = lo_msg.
+    endif.
+
+    commit work and wait.
   endmethod.
 
 
@@ -392,20 +427,32 @@ CLASS ZCL_ZOV_DPC_EXT IMPLEMENTATION.
   endmethod.
 
 
-  method OVITEMSET_DELETE_ENTITY.
-**try.
-*CALL METHOD SUPER->OVITEMSET_DELETE_ENTITY
-*  EXPORTING
-*    IV_ENTITY_NAME          =
-*    IV_ENTITY_SET_NAME      =
-*    IV_SOURCE_NAME          =
-*    IT_KEY_TAB              =
-**    io_tech_request_context =
-*    IT_NAVIGATION_PATH      =
-*    .
-** catch /iwbep/cx_mgw_busi_exception .
-** catch /iwbep/cx_mgw_tech_exception .
-**endtry.
+  method ovitemset_delete_entity.
+    data: ls_item type zovitem.
+    data: ls_key_tab like line of it_key_tab.
+
+    data(lo_msg) = me->/iwbep/if_mgw_conv_srv_runtime~get_message_container( ).
+
+    ls_item-ordemid = it_key_tab[ name = 'OrdemId' ]-value.
+    ls_item-itemid = it_key_tab[ name = 'ItemId' ]-value.
+
+    delete from zovitem
+    where ordemid = ls_item-ordemid
+      and itemid = ls_item-itemid.
+
+    if sy-subrc <> 0.
+      lo_msg->add_message_text_only(
+        exporting
+          iv_msg_type               =  'E'                " Message Type - defined by GCS_MESSAGE_TYPE
+          iv_msg_text               =  'OrdemId não informado'                " Message Text
+      ).
+
+      raise exception type /iwbep/cx_mgw_base_exception
+        exporting
+          message_container = lo_msg.
+    endif.
+
+
   endmethod.
 
 
