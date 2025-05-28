@@ -4,6 +4,9 @@ class ZCL_ZOV_DPC_EXT definition
   create public .
 
 public section.
+
+  methods /IWBEP/IF_MGW_APPL_SRV_RUNTIME~CREATE_DEEP_ENTITY
+    redefinition .
 protected section.
 
   methods MENSAGEMSET_CREATE_ENTITY
@@ -42,6 +45,142 @@ ENDCLASS.
 
 
 CLASS ZCL_ZOV_DPC_EXT IMPLEMENTATION.
+
+
+  method /iwbep/if_mgw_appl_srv_runtime~create_deep_entity.
+    data : ls_deep_entity  type zcl_zov_mpc_ext=>ty_ordem_item.
+    data : ls_deep_item    type zcl_zov_mpc_ext=>ts_ovitem.
+
+    data : ls_cab          type zovcab.
+    data : lt_item         type standard table of zovitem.
+    data : ls_item         type zovitem.
+    data : ld_updkz        type char1.
+    data : ld_datahora(14) type c.
+
+    data(lo_msg) = me->/iwbep/if_mgw_conv_srv_runtime~get_message_container( ).
+
+    call method io_data_provider->read_entry_data
+      importing
+        es_data = ls_deep_entity.
+
+    " cabeçalho
+    if ls_deep_entity-ordemid = 0.
+      ld_updkz = 'I'.
+
+      move-corresponding ls_deep_entity to ls_cab.
+
+      "ls_cab-criacao_data    = sy-datum.
+      "ls_cab-criacao_hora    = sy-uzeit.
+      "ls_cab-criacao_usuario = sy-uname.
+
+      ld_datahora            = ls_deep_entity-datacriacao.
+      ls_cab-criacao_data    = ld_datahora(8).
+      ls_cab-criacao_hora    = ld_datahora+8(6).
+      ls_cab-criacao_usuario = ls_deep_entity-criadopor.
+
+      select single max( ordemid )
+        into ls_cab-ordemid
+        from zovcab.
+
+      ls_cab-ordemid = ls_cab-ordemid + 1.
+    else.
+      ld_updkz = 'U'.
+
+      " carregando dados atuais
+      select single *
+        into ls_cab
+        from zovcab
+       where ordemid = ls_deep_entity-ordemid.
+
+      ls_cab-clienteid  = ls_deep_entity-clienteid.
+      ls_cab-status     = ls_deep_entity-status.
+      ls_cab-totalitens = ls_deep_entity-totalitens.
+      ls_cab-totalfrete = ls_deep_entity-totalfrete.
+      ls_cab-totalordem = ls_cab-totalitens + ls_cab-totalfrete.
+    endif.
+
+    " item
+    loop at ls_deep_entity-toovitem into ls_deep_item.
+      move-corresponding ls_deep_item to ls_item.
+
+      ls_item-ordemid = ls_cab-ordemid.
+      append ls_item to lt_item.
+    endloop.
+
+    " persistência cabeçalho
+    if ld_updkz = 'I'.
+      insert zovcab from ls_cab.
+      if sy-subrc <> 0.
+        rollback work.
+
+        lo_msg->add_message_text_only(
+          exporting
+            iv_msg_type = 'E'
+            iv_msg_text = 'Erro ao inserir ordem'
+        ).
+
+        raise exception type /iwbep/cx_mgw_busi_exception
+          exporting
+            message_container = lo_msg.
+      endif.
+    else.
+      modify zovcab from ls_cab.
+      if sy-subrc <> 0.
+        rollback work.
+
+        lo_msg->add_message_text_only(
+          exporting
+            iv_msg_type = 'E'
+            iv_msg_text = 'Erro ao atualizar ordem'
+        ).
+
+        raise exception type /iwbep/cx_mgw_busi_exception
+          exporting
+            message_container = lo_msg.
+      endif.
+    endif.
+
+    " persistência itens
+    delete from zovitem where ordemid = ls_cab-ordemid.
+    if lines( lt_item ) > 0.
+      insert zovitem from table lt_item.
+      if sy-subrc <> 0.
+        rollback work.
+
+        lo_msg->add_message_text_only(
+          exporting
+            iv_msg_type = 'E'
+            iv_msg_text = 'Erro ao inserir itens'
+        ).
+
+        raise exception type /iwbep/cx_mgw_busi_exception
+          exporting
+            message_container = lo_msg.
+      endif.
+    endif.
+
+    commit work and wait.
+
+    " atualizando deep entity de retorno
+
+    " cabeçalho
+    ls_deep_entity-ordemid = ls_cab-ordemid.
+    convert date ls_cab-criacao_data
+            time ls_cab-criacao_hora
+            into time stamp ls_deep_entity-datacriacao
+            time zone 'UTC'. "sy-zonlo.
+
+    " item
+    loop at ls_deep_entity-toovitem assigning field-symbol(<ls_deep_item>).
+      <ls_deep_item>-ordemid = ls_cab-ordemid.
+    endloop.
+
+    call method me->copy_data_to_ref
+      exporting
+        is_data = ls_deep_entity
+      changing
+        cr_data = er_deep_entity.
+  endmethod.
 
 
   method MENSAGEMSET_CREATE_ENTITY.
