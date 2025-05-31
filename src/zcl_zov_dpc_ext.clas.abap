@@ -7,6 +7,8 @@ public section.
 
   methods /IWBEP/IF_MGW_APPL_SRV_RUNTIME~CREATE_DEEP_ENTITY
     redefinition .
+  methods /IWBEP/IF_MGW_APPL_SRV_RUNTIME~EXECUTE_ACTION
+    redefinition .
 protected section.
 
   methods MENSAGEMSET_CREATE_ENTITY
@@ -180,6 +182,41 @@ CLASS ZCL_ZOV_DPC_EXT IMPLEMENTATION.
         is_data = ls_deep_entity
       changing
         cr_data = er_deep_entity.
+  endmethod.
+
+
+  method /iwbep/if_mgw_appl_srv_runtime~execute_action.
+    data: ld_ordemid  type zovcab-ordemid.
+    data: ld_status   type zovcab-status.
+    data: lt_bapiret2 type standard table of zcl_zov_mpc_ext=>ts_mensagem.
+    data: ls_bapiret2 type zcl_zov_mpc_ext=>ts_mensagem.
+
+    if iv_action_name = 'ZFI_ATUALIZA_STATUS'.
+      ld_ordemid = it_parameter[ name = 'ID_ORDEMID' ]-value.
+      ld_status  = it_parameter[ name = 'ID_STATUS' ]-value.
+
+      update zovcab
+         set status = ld_status
+       where ordemid = ld_ordemid.
+
+      if sy-subrc = 0.
+        clear ls_bapiret2.
+        ls_bapiret2-type    = 'S'.
+        ls_bapiret2-message = 'Status atualizado'.
+        append ls_bapiret2 to lt_bapiret2.
+      else.
+        clear ls_bapiret2.
+        ls_bapiret2-type    = 'E'.
+        ls_bapiret2-message = 'Erro ao atualizar status'.
+        append ls_bapiret2 to lt_bapiret2.
+      endif.
+    endif.
+
+    call method me->copy_data_to_ref
+      exporting
+        is_data = lt_bapiret2
+      changing
+        cr_data = er_data.
   endmethod.
 
 
